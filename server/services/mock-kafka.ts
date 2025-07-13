@@ -24,12 +24,19 @@ export class MockKafkaService {
     // Simulate periodic order updates
     this.messageInterval = setInterval(async () => {
       await this.simulateOrderUpdate();
-    }, 10000); // Every 10 seconds
+    }, 15000); // Every 15 seconds
   }
 
   private async simulateOrderUpdate() {
-    const sampleOrders = ['ORD-2024-001', 'ORD-2024-002', 'ORD-2024-003'];
-    const randomOrderId = sampleOrders[Math.floor(Math.random() * sampleOrders.length)];
+    // Get all current orders instead of hardcoded ones
+    const allOrders = await storage.getRecentOrders(10);
+    if (allOrders.length === 0) {
+      console.log('No orders found for simulation');
+      return;
+    }
+    
+    const randomOrder = allOrders[Math.floor(Math.random() * allOrders.length)];
+    const randomOrderId = randomOrder.orderId;
     
     // Simulate status progression
     const statusProgression = {
@@ -41,6 +48,8 @@ export class MockKafkaService {
 
     try {
       const currentOrder = await storage.getOrder(randomOrderId);
+      console.log(`Attempting to update order: ${randomOrderId}, current status: ${currentOrder?.status}`);
+      
       if (currentOrder && statusProgression[currentOrder.status as keyof typeof statusProgression]) {
         const newStatus = statusProgression[currentOrder.status as keyof typeof statusProgression];
         

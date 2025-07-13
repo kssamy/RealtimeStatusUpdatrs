@@ -288,6 +288,24 @@ export default function OrderMonitor() {
             <Card className="p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Track Order</h2>
               
+              {/* Quick start buttons */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700 mb-2">Quick Start - Try these sample orders:</p>
+                <div className="flex flex-wrap gap-2">
+                  {['ORD-2024-001', 'ORD-2024-002', 'ORD-2024-003'].map(id => (
+                    <Button
+                      key={id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOrderId(id)}
+                      className="text-xs"
+                    >
+                      {id}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
               <div className="mb-6">
                 <label htmlFor="order-id" className="block text-sm font-medium text-gray-700 mb-2">
                   Order ID
@@ -296,7 +314,7 @@ export default function OrderMonitor() {
                   <Input
                     id="order-id"
                     type="text"
-                    placeholder="Enter order ID (e.g., ORD-2024-001)"
+                    placeholder="Try: ORD-2024-001, ORD-2024-002, or ORD-2024-003"
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value)}
                     className="pr-10"
@@ -329,8 +347,8 @@ export default function OrderMonitor() {
                   onClick={async () => {
                     if (currentOrderId) {
                       try {
-                        // Direct fetch to backend API
-                        const response = await fetch(`http://localhost:5000/api/orders/${currentOrderId}/trigger-update`, {
+                        // Use relative URL to avoid CORS issues
+                        const response = await fetch(`/api/orders/${currentOrderId}/trigger-update`, {
                           method: 'POST',
                           headers: {
                             'Content-Type': 'application/json',
