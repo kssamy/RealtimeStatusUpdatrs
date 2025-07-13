@@ -79,23 +79,44 @@ export default function OrderMonitor() {
         setIsConnected(true);
         setShowLoading(false);
         setShowError(false);
+        console.log('WebSocket connected successfully');
         toast({
           title: "Connected",
           description: "Successfully connected to Kafka message broker",
         });
+        
+        // Subscribe to current order if tracking
+        if (currentOrderId) {
+          wsRef.current?.send(JSON.stringify({
+            type: 'subscribe_order',
+            orderId: currentOrderId,
+          }));
+        }
       };
 
       wsRef.current.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log('WebSocket message received:', data);
         
         if (data.type === 'order_update') {
+          // Invalidate all related queries for real-time updates
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId] });
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId, 'history'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId, 'messages'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/orders'] }); // Refresh recent orders too
+          
+          toast({
+            title: "Order Updated",
+            description: `Order ${data.data.orderId} status changed to ${data.data.status}`,
+          });
         } else if (data.type === 'message_update') {
           setMessages(prev => [...prev, data.data]);
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId, 'messages'] });
         } else if (data.type === 'connection_status') {
           setIsConnected(data.connected);
+        } else if (data.type === 'order_data') {
+          // Handle initial order data when subscribing
+          queryClient.setQueryData(['/api/orders', data.data.orderId], data.data);
         }
       };
 
@@ -103,12 +124,14 @@ export default function OrderMonitor() {
         setIsConnected(false);
         setShowLoading(false);
         setShowError(true);
+        console.log('WebSocket connection closed');
       };
 
-      wsRef.current.onerror = () => {
+      wsRef.current.onerror = (error) => {
         setIsConnected(false);
         setShowLoading(false);
         setShowError(true);
+        console.error('WebSocket error:', error);
       };
     } catch (error) {
       setShowLoading(false);
@@ -299,6 +322,50 @@ export default function OrderMonitor() {
                 >
                   <Pause className="w-4 h-4 mr-2" />
                   Pause Tracking
+                </Button>
+                
+                {/* Test button for manual updates */}
+                <Button 
+                  onClick={async () => {
+                    if (currentOrderId) {
+                      try {
+                        // Direct fetch to backend API
+                        const response = await fetch(`http://localhost:5000/api/orders/${currentOrderId}/trigger-update`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ status: 'shipped' }),
+                        });
+                        
+                        if (response.ok) {
+                          toast({
+                            title: "Manual Update Triggered",
+                            description: `Order ${currentOrderId} status update sent`,
+                          });
+                        } else {
+                          toast({
+                            title: "Update Failed",
+                            description: "Failed to trigger manual update",
+                            variant: "destructive",
+                          });
+                        }
+                      } catch (error) {
+                        console.error('Manual update error:', error);
+                        toast({
+                          title: "Update Failed",
+                          description: "Failed to trigger manual update",
+                          variant: "destructive",
+                        });
+                      }
+                    }
+                  }}
+                  disabled={!currentOrderId}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Cog className="w-4 h-4 mr-2" />
+                  Test Update
                 </Button>
               </div>
 
