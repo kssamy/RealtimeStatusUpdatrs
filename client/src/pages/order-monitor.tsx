@@ -10,18 +10,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
+  Search, 
+  Package, 
+  Clock, 
+  CheckCircle, 
   Truck, 
-  Settings, 
   Play, 
   Pause, 
-  Search, 
+  Eye, 
+  EyeOff, 
+  AlertCircle, 
+  MessageCircle, 
+  Mail, 
+  Calendar, 
+  User, 
   Trash2, 
-  Check, 
-  Clock, 
-  Cog, 
-  AlertTriangle,
-  Info,
-  TriangleAlert,
+  Cog,
   Loader2
 } from "lucide-react";
 import type { Order, OrderMessage, OrderStatusHistory } from "@shared/schema";
@@ -68,8 +72,13 @@ export default function OrderMonitor() {
 
   // WebSocket connection
   useEffect(() => {
+    if (!isTracking) return;
+
+    // Use the correct WebSocket URL for development and production
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = process.env.NODE_ENV === "development" 
+      ? `ws://localhost:5000/ws`
+      : `${protocol}//${window.location.host}/ws`;
     
     try {
       setShowLoading(true);
@@ -82,16 +91,8 @@ export default function OrderMonitor() {
         console.log('WebSocket connected successfully');
         toast({
           title: "Connected",
-          description: "Successfully connected to Kafka message broker",
+          description: "Real-time updates connected",
         });
-        
-        // Subscribe to current order if tracking
-        if (currentOrderId) {
-          wsRef.current?.send(JSON.stringify({
-            type: 'subscribe_order',
-            orderId: currentOrderId,
-          }));
-        }
       };
 
       wsRef.current.onmessage = (event) => {
@@ -123,7 +124,6 @@ export default function OrderMonitor() {
       wsRef.current.onclose = () => {
         setIsConnected(false);
         setShowLoading(false);
-        setShowError(true);
         console.log('WebSocket connection closed');
       };
 
@@ -136,14 +136,16 @@ export default function OrderMonitor() {
     } catch (error) {
       setShowLoading(false);
       setShowError(true);
+      console.error('WebSocket connection failed:', error);
     }
 
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
-  }, [queryClient, toast]);
+  }, [isTracking, queryClient, toast]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -240,17 +242,17 @@ export default function OrderMonitor() {
 
   const getMessageIcon = (type: string) => {
     switch (type) {
-      case 'warning': return <AlertTriangle className="w-4 h-4 text-warning" />;
-      case 'error': return <TriangleAlert className="w-4 h-4 text-error" />;
-      case 'info': return <Info className="w-4 h-4 text-primary" />;
-      default: return <div className="w-2 h-2 bg-success rounded-full" />;
+      case 'warning': return <AlertCircle className="w-4 h-4 text-yellow-500" />;
+      case 'error': return <AlertCircle className="w-4 h-4 text-red-500" />;
+      case 'info': return <MessageCircle className="w-4 h-4 text-blue-500" />;
+      default: return <div className="w-2 h-2 bg-green-500 rounded-full" />;
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'processing': return <Cog className="w-4 h-4 text-white animate-spin" />;
-      case 'delivered': return <Check className="w-4 h-4 text-white" />;
+      case 'delivered': return <CheckCircle className="w-4 h-4 text-white" />;
       case 'shipped': return <Truck className="w-4 h-4 text-white" />;
       default: return <Clock className="w-4 h-4 text-white" />;
     }
@@ -274,7 +276,7 @@ export default function OrderMonitor() {
                 </span>
               </div>
               <Button variant="ghost" size="sm">
-                <Settings className="w-4 h-4" />
+                <Cog className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -523,23 +525,43 @@ export default function OrderMonitor() {
               </Card>
             )}
 
-            {/* Real-time Messages */}
+            {/* Real-time Messages - Always Visible */}
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">Real-time Messages</h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleClearMessages}
-                  disabled={!currentOrderId}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Clear
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${isTracking ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+                  <span className="text-sm text-gray-600">
+                    {isTracking ? 'Listening' : 'Stopped'}
+                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleClearMessages}
+                    disabled={!currentOrderId}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Clear
+                  </Button>
+                </div>
               </div>
 
               <ScrollArea className="h-96">
                 <div className="space-y-3">
+                  {orderMessages.length === 0 && !isTracking && (
+                    <div className="text-center py-8 text-gray-500">
+                      <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-sm">No messages yet. Start tracking an order to see real-time updates.</p>
+                    </div>
+                  )}
+                  {orderMessages.length === 0 && isTracking && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="animate-pulse">
+                        <MessageCircle className="w-12 h-12 mx-auto mb-3 text-blue-300" />
+                        <p className="text-sm">Listening for real-time updates...</p>
+                      </div>
+                    </div>
+                  )}
                   {orderMessages.map((message: OrderMessage) => (
                     <div key={message.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                       {getMessageIcon(message.messageType)}
@@ -606,7 +628,7 @@ export default function OrderMonitor() {
           <Card className="max-w-md w-full mx-4">
             <CardContent className="p-6">
               <div className="flex items-center mb-4">
-                <TriangleAlert className="text-error text-xl mr-3" />
+                <AlertCircle className="text-red-500 text-xl mr-3" />
                 <h3 className="text-lg font-semibold text-gray-900">Connection Error</h3>
               </div>
               <p className="text-gray-600 mb-6">
