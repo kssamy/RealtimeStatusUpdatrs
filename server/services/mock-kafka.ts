@@ -1,9 +1,10 @@
-import { WebSocketServer, WebSocket } from 'ws';
 import { storage } from '../storage';
 import { MessageType, OrderStatus } from '@shared/schema';
 
+type BroadcastFunction = (message: any) => void;
+
 export class MockKafkaService {
-  private wss: WebSocketServer | null = null;
+  private broadcast: BroadcastFunction | null = null;
   private isConnected = false;
   private messageInterval: NodeJS.Timeout | null = null;
 
@@ -11,12 +12,12 @@ export class MockKafkaService {
     // No actual Kafka connection needed for demo
   }
 
-  async initialize(webSocketServer: WebSocketServer) {
-    this.wss = webSocketServer;
+  async initialize(broadcastFunction: BroadcastFunction) {
+    this.broadcast = broadcastFunction;
     this.isConnected = true;
     console.log('Mock Kafka service initialized successfully');
     
-    // Start simulating messages every 10 seconds
+    // Start simulating messages every 15 seconds
     this.startMessageSimulation();
   }
 
@@ -120,13 +121,9 @@ export class MockKafkaService {
   }
 
   private broadcastToClients(message: any) {
-    if (!this.wss) return;
-
-    this.wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(message));
-      }
-    });
+    if (!this.broadcast) return;
+    
+    this.broadcast(message);
   }
 
   async disconnect() {

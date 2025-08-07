@@ -41,7 +41,7 @@ export default function OrderMonitor() {
   const [showError, setShowError] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   
-  const wsRef = useRef<WebSocket | null>(null);
+  const sseRef = useRef<EventSource | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -70,34 +70,32 @@ export default function OrderMonitor() {
     refetchInterval: 30000,
   });
 
-  // WebSocket connection
+  // SSE (Server-Sent Events) connection
   useEffect(() => {
     if (!isTracking) return;
 
-    // Use the correct WebSocket URL for development and production
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = process.env.NODE_ENV === "development" 
-      ? `ws://localhost:5000/ws`
-      : `${protocol}//${window.location.host}/ws`;
+    const sseUrl = process.env.NODE_ENV === "development" 
+      ? 'http://localhost:5000/api/events'
+      : '/api/events';
     
     try {
       setShowLoading(true);
-      wsRef.current = new WebSocket(wsUrl);
+      const eventSource = new EventSource(sseUrl);
 
-      wsRef.current.onopen = () => {
+      eventSource.onopen = () => {
         setIsConnected(true);
         setShowLoading(false);
         setShowError(false);
-        console.log('WebSocket connected successfully');
+        console.log('SSE connected successfully');
         toast({
           title: "Connected",
-          description: "Real-time updates connected",
+          description: "Real-time updates connected via SSE",
         });
       };
 
-      wsRef.current.onmessage = (event) => {
+      eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
+        console.log('SSE message received:', data);
         
         if (data.type === 'order_update') {
           // Invalidate all related queries for real-time updates
@@ -107,42 +105,36 @@ export default function OrderMonitor() {
           queryClient.invalidateQueries({ queryKey: ['/api/orders'] }); // Refresh recent orders too
           
           toast({
-            title: "Order Updated",
-            description: `Order ${data.data.orderId} status changed to ${data.data.status}`,
+            title: "Live Update",
+            description: `Order ${data.data.orderId} → ${data.data.status}`,
           });
         } else if (data.type === 'message_update') {
           setMessages(prev => [...prev, data.data]);
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId, 'messages'] });
         } else if (data.type === 'connection_status') {
           setIsConnected(data.connected);
-        } else if (data.type === 'order_data') {
-          // Handle initial order data when subscribing
-          queryClient.setQueryData(['/api/orders', data.data.orderId], data.data);
         }
       };
 
-      wsRef.current.onclose = () => {
-        setIsConnected(false);
-        setShowLoading(false);
-        console.log('WebSocket connection closed');
-      };
-
-      wsRef.current.onerror = (error) => {
+      eventSource.onerror = (error) => {
         setIsConnected(false);
         setShowLoading(false);
         setShowError(true);
-        console.error('WebSocket error:', error);
+        console.error('SSE error:', error);
       };
+
+      // Store reference for cleanup
+      sseRef.current = eventSource;
     } catch (error) {
       setShowLoading(false);
       setShowError(true);
-      console.error('WebSocket connection failed:', error);
+      console.error('SSE connection failed:', error);
     }
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+      if (sseRef.current) {
+        sseRef.current.close();
+        sseRef.current = null;
       }
     };
   }, [isTracking, queryClient, toast]);
@@ -166,13 +158,7 @@ export default function OrderMonitor() {
 
     setCurrentOrderId(orderId);
     setIsTracking(true);
-    
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'subscribe_order',
-        orderId: orderId,
-      }));
-    }
+
 
     toast({
       title: "Tracking Started",
@@ -270,9 +256,9 @@ export default function OrderMonitor() {
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success animate-pulse' : 'bg-error'}`} />
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
                 <span className="text-sm text-gray-600">
-                  {isConnected ? 'Connected to Kafka' : 'Disconnected'}
+                  {isConnected ? 'SSE Connected' : 'Disconnected'}
                 </span>
               </div>
               <Button variant="ghost" size="sm">
@@ -632,7 +618,7 @@ export default function OrderMonitor() {
                 <h3 className="text-lg font-semibold text-gray-900">Connection Error</h3>
               </div>
               <p className="text-gray-600 mb-6">
-                Unable to connect to Kafka message broker. Please check your connection and try again.
+                Unable to connect to real-time event stream. Please check your connection and try again.
               </p>
               <div className="flex space-x-3">
                 <Button onClick={handleRetryConnection}>
@@ -656,8 +642,8 @@ export default function OrderMonitor() {
               <div className="mb-4">
                 <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Connecting to Kafka</h3>
-              <p className="text-gray-600">Establishing connection to message broker...</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Connecting to SSE</h3>
+              <p className="text-gray-600">Establishing Server-Sent Events connection...</p>
             </CardContent>
           </Card>
         </div>

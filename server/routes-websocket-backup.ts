@@ -1,5 +1,6 @@
-import type { Express, Request, Response } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { mockKafkaService } from "./services/mock-kafka";
 import { insertOrderSchema, insertOrderMessageSchema } from "@shared/schema";
@@ -89,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const history = await storage.getOrderStatusHistory(orderId);
       res.json(history);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch history' });
+      res.status(500).json({ error: 'Failed to fetch status history' });
     }
   });
 
@@ -105,23 +106,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/orders', async (req, res) => {
     try {
-      const validatedData = insertOrderSchema.parse(req.body);
-      const order = await storage.createOrder(validatedData);
+      const orderData = insertOrderSchema.parse(req.body);
+      const order = await storage.createOrder(orderData);
       res.json(order);
     } catch (error) {
       res.status(400).json({ error: 'Invalid order data' });
-    }
-  });
-
-  app.post('/api/orders/:orderId/trigger-update', async (req, res) => {
-    try {
-      const { orderId } = req.params;
-      const { status } = req.body;
-      
-      await mockKafkaService.triggerOrderUpdate(orderId, status);
-      res.json({ success: true, message: 'Order update triggered' });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to trigger update' });
     }
   });
 
@@ -132,6 +121,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to clear messages' });
+    }
+  });
+
+  app.get('/api/kafka/status', (req, res) => {
+    res.json({ connected: mockKafkaService.getConnectionStatus() });
+  });
+
+  // Manual trigger for order status update (for demo purposes)
+  app.post('/api/orders/:orderId/trigger-update', async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ error: 'Status is required' });
+      }
+      
+      await mockKafkaService.triggerOrderUpdate(orderId, status);
+      res.json({ success: true, message: `Order ${orderId} updated to ${status}` });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to trigger order update' });
     }
   });
 
