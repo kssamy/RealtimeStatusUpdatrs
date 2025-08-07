@@ -74,7 +74,10 @@ export default function OrderMonitor() {
   useEffect(() => {
     if (!isTracking) return;
 
-    const sseUrl = '/api/events'; // Use relative URL for both dev and prod
+    // Subscribe to specific order if tracking one
+    const sseUrl = currentOrderId 
+      ? `/api/events?orderId=${currentOrderId}` 
+      : '/api/events'; // Use relative URL for both dev and prod
     
     try {
       setShowLoading(true);
@@ -113,7 +116,10 @@ export default function OrderMonitor() {
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId, 'messages'] });
         } else if (data.type === 'connection_status') {
           setIsConnected(data.connected);
-          console.log('Connection status updated:', data.connected);
+          if (data.clientId) {
+            setClientId(data.clientId);
+          }
+          console.log('Connection status updated:', data.connected, 'ClientId:', data.clientId);
         }
       };
 
