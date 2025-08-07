@@ -17,13 +17,13 @@ Preferred communication style: Simple, everyday language.
 - **Styling**: Tailwind CSS with custom CSS variables for theming
 - **State Management**: TanStack Query for server state management
 - **Routing**: Wouter for client-side routing
-- **Real-time Communication**: WebSocket client for live updates
+- **Real-time Communication**: Server-Sent Events (SSE) client for live updates
 
 ### Backend Architecture
 - **Framework**: Express.js with TypeScript
 - **Runtime**: Node.js with ES modules
 - **Database ORM**: Drizzle ORM for type-safe database operations
-- **Real-time Communication**: WebSocket server for live updates
+- **Real-time Communication**: Server-Sent Events (SSE) endpoint for live updates
 - **Message Streaming**: Kafka integration for order event processing
 - **Session Management**: PostgreSQL session store using connect-pg-simple
 
@@ -35,9 +35,10 @@ Preferred communication style: Simple, everyday language.
 - **Order Status History**: Maintains audit trail of status changes with operator info and timestamps
 
 ### Real-time Communication
-- **WebSocket Server**: Handles client connections for real-time updates
+- **Server-Sent Events (SSE)**: Provides real-time updates via HTTP streaming at `/api/events`
 - **Kafka Consumer**: Processes order events from Kafka topics and broadcasts to connected clients
 - **Message Types**: Supports order updates, status changes, and connection status messages
+- **Auto-reconnection**: Built-in browser reconnection handling for improved reliability
 
 ### Frontend Components
 - **Order Monitor**: Main dashboard for tracking orders with search, filtering, and real-time updates
@@ -48,8 +49,8 @@ Preferred communication style: Simple, everyday language.
 
 1. **Order Events**: Kafka produces order events to configured topics
 2. **Event Processing**: Backend Kafka consumer processes events and updates database
-3. **Real-time Updates**: WebSocket server broadcasts updates to connected clients
-4. **UI Updates**: Frontend receives WebSocket messages and updates the interface
+3. **Real-time Updates**: SSE endpoint broadcasts updates to connected clients via HTTP streaming
+4. **UI Updates**: Frontend receives SSE messages and updates the interface
 5. **User Interactions**: Users can search, filter, and track specific orders
 
 ## External Dependencies
@@ -82,6 +83,6 @@ Preferred communication style: Simple, everyday language.
 ### Configuration
 - **Database**: Configured via `DATABASE_URL` environment variable
 - **Kafka**: Configurable brokers and topics via environment variables
-- **WebSocket**: Integrated with HTTP server for real-time communication
+- **Server-Sent Events**: HTTP-based streaming endpoint at `/api/events` for real-time communication
 
 The system is designed to be scalable and maintainable, with clear separation between frontend and backend concerns, type safety throughout, and real-time capabilities for monitoring order status changes.
