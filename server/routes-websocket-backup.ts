@@ -103,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch orders' });
     }
   });
-
+mock 
   app.post('/api/orders', async (req, res) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
