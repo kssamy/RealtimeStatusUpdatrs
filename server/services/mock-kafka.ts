@@ -22,10 +22,12 @@ export class MockKafkaService {
   }
 
   private startMessageSimulation() {
-    // Simulate periodic order updates
-    this.messageInterval = setInterval(async () => {
-      await this.simulateOrderUpdate();
-    }, 15000); // Every 15 seconds
+    // Simulate periodic order updates - start after a small delay
+    setTimeout(() => {
+      this.messageInterval = setInterval(async () => {
+        await this.simulateOrderUpdate();
+      }, 10000); // Every 10 seconds
+    }, 5000); // Wait 5 seconds before starting simulation
   }
 
   private async simulateOrderUpdate() {
