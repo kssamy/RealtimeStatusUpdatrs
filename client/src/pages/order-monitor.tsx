@@ -40,6 +40,7 @@ export default function OrderMonitor() {
   const [isConnected, setIsConnected] = useState(false);
   const [showError, setShowError] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
+  const [clientId, setClientId] = useState<string | null>(null);
   
   const sseRef = useRef<EventSource | null>(null);
   const queryClient = useQueryClient();
