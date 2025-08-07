@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { storage } from "./storage";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
@@ -37,6 +38,37 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Create default orders on startup
+  const existingOrders = await storage.getRecentOrders(5);
+  if (existingOrders.length === 0) {
+    console.log('Creating default orders...');
+    await storage.createOrder({
+      orderId: 'ORD-2024-001',
+      customerId: 'CUST-123',
+      customerName: 'John Doe',
+      status: 'pending',
+      totalAmount: '89.99',
+      itemCount: 3,
+    });
+    await storage.createOrder({
+      orderId: 'ORD-2024-002',
+      customerId: 'CUST-456',
+      customerName: 'Jane Smith',
+      status: 'confirmed',
+      totalAmount: '159.50',
+      itemCount: 2,
+    });
+    await storage.createOrder({
+      orderId: 'ORD-2024-003',
+      customerId: 'CUST-789',
+      customerName: 'Bob Johnson',
+      status: 'processing',
+      totalAmount: '45.00',
+      itemCount: 1,
+    });
+    console.log('Default orders created');
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
