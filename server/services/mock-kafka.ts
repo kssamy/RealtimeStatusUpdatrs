@@ -85,6 +85,8 @@ export class MockKafkaService {
             data: updatedOrder,
           });
 
+          console.log(`SSE broadcast sent: order ${randomOrderId} updated to ${newStatus}`);
+
           console.log(`Simulated order update: ${randomOrderId} -> ${newStatus}`);
         }
       }

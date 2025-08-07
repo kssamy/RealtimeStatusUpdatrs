@@ -12,6 +12,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Initialize Mock Kafka service with SSE broadcast function
   await mockKafkaService.initialize((message: any) => {
+    console.log(`SSE broadcasting to ${sseClients.size} clients:`, message);
     // Broadcast to all SSE clients
     sseClients.forEach(client => {
       try {

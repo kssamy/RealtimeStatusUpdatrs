@@ -96,21 +96,24 @@ export default function OrderMonitor() {
         console.log('SSE message received:', data);
         
         if (data.type === 'order_update') {
+          console.log('Processing order_update for:', data.data.orderId);
           // Invalidate all related queries for real-time updates
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId] });
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId, 'history'] });
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId, 'messages'] });
           queryClient.invalidateQueries({ queryKey: ['/api/orders'] }); // Refresh recent orders too
           
+          console.log('Triggering toast notification');
           toast({
-            title: "Live Update",
-            description: `Order ${data.data.orderId} → ${data.data.status}`,
+            title: "🚀 Live Update",
+            description: `Order ${data.data.orderId} updated to ${data.data.status}`,
           });
         } else if (data.type === 'message_update') {
           setMessages(prev => [...prev, data.data]);
           queryClient.invalidateQueries({ queryKey: ['/api/orders', data.data.orderId, 'messages'] });
         } else if (data.type === 'connection_status') {
           setIsConnected(data.connected);
+          console.log('Connection status updated:', data.connected);
         }
       };
 
