@@ -28,23 +28,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Client connected to SSE');
     
     // Set SSE headers
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control'
-    });
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Cache-Control');
+    
+    // Prevent request timeout
+    res.setHeader('X-Accel-Buffering', 'no');
+    
+    // Send status immediately
+    res.status(200);
 
     // Add client to active connections
     sseClients.add(res);
 
     // Send initial connection status
-    res.write(`data: ${JSON.stringify({
-      type: 'connection_status',
-      connected: mockKafkaService.getConnectionStatus(),
-      timestamp: new Date().toISOString()
-    })}\n\n`);
+    try {
+      res.write(`data: ${JSON.stringify({
+        type: 'connection_status',
+        connected: mockKafkaService.getConnectionStatus(),
+        timestamp: new Date().toISOString()
+      })}\n\n`);
+    } catch (error) {
+      console.error('Error sending initial SSE message:', error);
+      sseClients.delete(res);
+      return;
+    }
 
     // Handle client disconnect
     req.on('close', () => {
@@ -52,7 +62,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       sseClients.delete(res);
     });
 
-    req.on('error', () => {
+    req.on('error', (error) => {
+      console.error('SSE request error:', error);
+      sseClients.delete(res);
+    });
+
+    res.on('error', (error) => {
+      console.error('SSE response error:', error);
       sseClients.delete(res);
     });
   });

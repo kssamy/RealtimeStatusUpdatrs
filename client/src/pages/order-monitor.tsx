@@ -74,9 +74,7 @@ export default function OrderMonitor() {
   useEffect(() => {
     if (!isTracking) return;
 
-    const sseUrl = process.env.NODE_ENV === "development" 
-      ? 'http://localhost:5000/api/events'
-      : '/api/events';
+    const sseUrl = '/api/events'; // Use relative URL for both dev and prod
     
     try {
       setShowLoading(true);
@@ -120,7 +118,9 @@ export default function OrderMonitor() {
         setIsConnected(false);
         setShowLoading(false);
         setShowError(true);
-        console.error('SSE error:', error);
+        console.error('SSE connection error:', error);
+        console.error('EventSource readyState:', eventSource.readyState);
+        console.error('SSE URL:', sseUrl);
       };
 
       // Store reference for cleanup
