@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a real-time order monitoring system built with React and Express that tracks order status and provides live updates through WebSocket connections. The system integrates with Kafka for message streaming and uses PostgreSQL for data persistence.
+This is a real-time order monitoring system built with React and Express that tracks order status and provides live updates through Server-Sent Events (SSE). The system integrates with Kafka for message streaming and uses PostgreSQL for data persistence.
 
 ## User Preferences
 
@@ -59,7 +59,7 @@ Preferred communication style: Simple, everyday language.
 - **@neondatabase/serverless**: PostgreSQL database driver for serverless environments
 - **kafkajs**: Kafka client for message streaming
 - **drizzle-orm**: Type-safe ORM for database operations
-- **ws**: WebSocket implementation for real-time communication
+- **express**: HTTP server framework with SSE streaming support
 
 ### UI Dependencies
 - **@radix-ui/***: Accessible UI primitives
